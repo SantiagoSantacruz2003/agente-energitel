@@ -1,0 +1,108 @@
+{
+  "gemini-2.0-flash": {
+    "input_cost_per_1m_tokens": 0.15,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 0.60,
+    "currency": "USD",
+    "provider": "Google",
+    "description": "Gemini 2.0 Flash - Fast multimodal model"
+  },
+  "gemini-1.5-pro": {
+    "input_cost_per_1m_tokens": 0.25,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 0.75,
+    "currency": "USD",
+    "provider": "Google",
+    "description": "Gemini 1.5 Pro - Advanced reasoning model"
+  },
+  "gemini-1.5-flash": {
+    "input_cost_per_1m_tokens": 0.07,
+    "cached_input_cost_per_1m_tokens": 15,
+    "output_cost_per_1m_tokens": 0.30,
+    "currency": "USD",
+    "provider": "Google",
+    "description": "Gemini 1.5 Flash - Balanced speed and performance"
+  },
+  "claude-3-sonnet": {
+    "input_cost_per_1m_tokens": 3.0,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 15.0,
+    "currency": "USD",
+    "provider": "Anthropic",
+    "description": "Claude 3 Sonnet - Balanced performance"
+  },
+  "claude-3-haiku": {
+    "input_cost_per_1m_tokens": 0.25,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 1.25,
+    "currency": "USD",
+    "provider": "Anthropic",
+    "description": "Claude 3 Haiku - Fast and efficient"
+  },
+  "claude-3-opus": {
+    "input_cost_per_1m_tokens": 15.0,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 75.0,
+    "currency": "USD",
+    "provider": "Anthropic",
+    "description": "Claude 3 Opus - Most capable model"
+  },
+  "gpt-4o": {
+    "input_cost_per_1m_tokens": 5.0,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 15.0,
+    "currency": "USD",
+    "provider": "OpenAI",
+    "description": "GPT-4o - Multimodal flagship"
+  },
+  "gpt-4o-mini": {
+    "input_cost_per_1m_tokens": 0.15,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 0.60,
+    "currency": "USD",
+    "provider": "OpenAI",
+    "description": "GPT-4o Mini - Efficient and fast"
+  },
+  "gpt-3.5-turbo": {
+    "input_cost_per_1m_tokens": 0.50,
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 1.50,
+    "currency": "USD",
+    "provider": "OpenAI",
+    "description": "GPT-3.5 Turbo - Cost-effective option"
+  },
+  "gpt-4.1": {
+    "input_cost_per_1m_tokens": 2.0,
+
+    "cached_input_cost_per_1m_tokens": 1,
+    "output_cost_per_1m_tokens": 0.50,
+    "currency": "USD",
+    "provider": "OpenAI",
+    "description": "GPT-4.1 - Cost-effective option"
+  },
+  "gpt-5": {
+  "input_cost_per_1m_tokens": 1.25,
+  "cached_input_cost_per_1m_tokens": 0.125,
+  "output_cost_per_1m_tokens": 10.00,
+  "currency": "USD",
+  "provider": "OpenAI",
+  "description": "GPT-5 – modelo estándar con balance entre costo y capacidad"
+},
+"gpt-5-mini": {
+  "input_cost_per_1m_tokens": 0.25,
+  "cached_input_cost_per_1m_tokens": 0.025,
+  "output_cost_per_1m_tokens": 2.00,
+  "currency": "USD",
+  "provider": "OpenAI",
+  "description": "GPT-5 Mini – versión más económica para tareas más ligeras"
+},
+"gpt-5-nano": {
+  "input_cost_per_1m_tokens": 0.05,
+  "cached_input_cost_per_1m_tokens": 0.005,
+  "output_cost_per_1m_tokens": 0.40,
+  "currency": "USD",
+  "provider": "OpenAI",
+  "description": "GPT-5 Nano – versión ultra rápida y de muy bajo costo"
+}
+
+}

@@ -1,0 +1,11 @@
+flask
+anthropic
+requests
+pytz
+beautifulsoup4
+python-dotenv
+openai>=0.27.8
+google.genai
+redis>=4.0.0
+pandas
+langfuse
