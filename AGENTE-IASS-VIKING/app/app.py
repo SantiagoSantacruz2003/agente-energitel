@@ -71,4 +71,5 @@ start_cleanup_thread(conversation_manager, thread_locks)
 
 if __name__ == '__main__':
     logger.info("Iniciando la aplicación Flask")
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.getenv('PORT', 8080))  # Puerto dinámico para deployment
+    app.run(host='0.0.0.0', port=port, debug=False)

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(pip3 install:*)",
+      "Bash(ls:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(pip --version)",
+      "Bash(pkill:*)",
+      "Read(/mnt/c/**)",
+      "Read(/mnt/c/**)",
+      "Bash(sync)",
+      "Bash(pip show:*)",
+      "WebSearch"
+    ],
+    "deny": []
+  }
+}

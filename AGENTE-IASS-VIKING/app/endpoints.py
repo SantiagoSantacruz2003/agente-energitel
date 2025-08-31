@@ -93,6 +93,16 @@ ASSISTANT_FILES = {
     5: "PROMPTS/ENERGITEL/AGENTE_ENERGITEL_INICIAL.txt"  # Default/fallback
 }
 
+# Mapa para asociar valores de 'assistant' con archivos de herramientas function
+ASSISTANT_TOOLS = {
+    0: "tools/tools_0.json",
+    1: "tools/tools_1.json", 
+    2: "tools/tools_2.json",
+    3: "tools/tools_3.json",
+    4: "tools/tools_4.json",
+    5: "tools/default_tools.json"  # Default/fallback
+}
+
 # Configuración MCP para cada asistente - Simple y directo
 ASSISTANT_MCP_SERVERS = {
     0: {

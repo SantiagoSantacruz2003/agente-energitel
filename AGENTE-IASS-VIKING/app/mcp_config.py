@@ -47,15 +47,16 @@ class SimpleMCPClient:
         self._load_tools_for_assistant()
     
     def _load_tools_for_assistant(self):
-        """Carga las herramientas específicas para este assistant"""
-        # Mapeo simplificado de assistant a archivo de herramientas
-        tools_mapping = {
-            0: "tools_openai.json",
-            5: "default_tools.json"
-        }
+        """Carga las herramientas específicas para este assistant usando ASSISTANT_TOOLS"""
+        # Importar mapeo desde endpoints
+        try:
+            from app.endpoints import ASSISTANT_TOOLS
+            tools_file = ASSISTANT_TOOLS.get(self.assistant_number, ASSISTANT_TOOLS[5])
+        except ImportError:
+            # Fallback si no se puede importar
+            tools_file = f"tools/tools_{self.assistant_number}.json" if self.assistant_number != 5 else "tools/default_tools.json"
         
-        tools_file = tools_mapping.get(self.assistant_number, "default_tools.json")
-        tools_path = os.path.join(os.path.dirname(__file__), '..', 'tools', tools_file)
+        tools_path = os.path.join(os.path.dirname(__file__), '..', tools_file)
         
         try:
             with open(tools_path, 'r', encoding='utf-8') as f:
