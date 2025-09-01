@@ -21,70 +21,16 @@ logger = logging.getLogger(__name__)
 langfuse = Langfuse()
 
 
-def execute_function_tool(tool_name, tool_args, assistant_number):
-    """Ejecuta una herramienta tipo function basada en ASSISTANT_TOOLS"""
-    try:
-        logger.info(f"🔧 [FUNCTION EXEC] Ejecutando {tool_name} para assistant {assistant_number}")
-        logger.info(f"🔧 [FUNCTION EXEC] Argumentos: {tool_args}")
-        
-        # Ejecutar herramientas específicas con validación
-        if tool_name == "cambiar_nombre":
-            nombre = tool_args.get('nombre', '').strip()
-            if not nombre:
-                result = {
-                    "ok": False,
-                    "error": "Nombre es requerido",
-                    "message": "Por favor proporciona tu nombre completo (nombre y apellido)"
-                }
-            else:
-                result = {
-                    "ok": True,
-                    "mensaje": f"Nombre cambiado exitosamente a: {nombre}",
-                    "nombre_anterior": "Usuario sin nombre",
-                    "nombre_nuevo": nombre
-                }
-        elif tool_name == "crear_direccion":
-            # Validar argumentos requeridos para crear_direccion
-            required_fields = ['sede', 'nombre_cliente', 'direccion_cliente', 'ciudad_cliente', 'tipo_pedido']
-            missing_fields = [field for field in required_fields if not tool_args.get(field, '').strip()]
-            
-            if missing_fields:
-                result = {
-                    "ok": False,
-                    "error": "Campos requeridos faltantes",
-                    "message": f"Los siguientes campos son obligatorios: {', '.join(missing_fields)}",
-                    "missing_fields": missing_fields
-                }
-            else:
-                result = {
-                    "ok": True,
-                    "direccion_id": f"dir_{int(time.time())}",
-                    "mensaje": f"Dirección creada para {tool_args.get('nombre_cliente')} en {tool_args.get('sede')}",
-                    "detalles": {
-                        "sede": tool_args.get('sede'),
-                        "cliente": tool_args.get('nombre_cliente'),
-                        "direccion": tool_args.get('direccion_cliente'),
-                        "ciudad": tool_args.get('ciudad_cliente'),
-                        "tipo": tool_args.get('tipo_pedido')
-                    }
-                }
-        else:
-            result = {
-                "ok": True,
-                "mensaje": f"Herramienta {tool_name} ejecutada exitosamente",
-                "args_recibidos": tool_args
-            }
-            
-        logger.info(f"🔧 [FUNCTION EXEC] Resultado: {result}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"🔧 [FUNCTION EXEC] Error ejecutando {tool_name}: {e}")
-        return {
-            "ok": False,
-            "error": str(e),
-            "tool_name": tool_name
-        }
+# Bridge genérico a n8n para function tools
+from app.n8n_bridge import execute_n8n_function_tool as _exec_n8n
+
+def execute_function_tool(tool_name, tool_args, assistant_number, subscriber_id=None, thread_id=None):
+    """
+    Bridge genérico a n8n para function tools. Sin validaciones de negocio.
+    Las validaciones de negocio viven en el Schema (OpenAI) o en n8n.
+    Las herramientas MCP mantienen su flujo original sin modificaciones.
+    """
+    return _exec_n8n(tool_name, tool_args, assistant_number, subscriber_id, thread_id)
 
 
 def execute_mcp_tool(tool_name, tool_args, mcp_servers):
@@ -133,7 +79,8 @@ def _fallback_route_b(client, responses_input, openai_tools, llm_id,
 
 
 def handle_tool_calls_responses_api(client, initial_response, responses_input, openai_tools, 
-                                   llm_id, thread_id, model_parameters, assistant_number, mcp_servers=None, function_tool_calls=None):
+                                   llm_id, thread_id, model_parameters, assistant_number, 
+                                   mcp_servers=None, function_tool_calls=None, subscriber_id=None):
     """Maneja tool calls y hace segunda llamada a Responses API"""
     try:
         logger.info(f"🔧 [TOOL HANDLER] Iniciando manejo de tool calls")
@@ -156,7 +103,11 @@ def handle_tool_calls_responses_api(client, initial_response, responses_input, o
         response_id = getattr(initial_response, 'id', None)
         logger.info(f"🔧 [TOOL HANDLER] Response ID para submit_tool_outputs: {response_id}")
         
-        # 1. Ejecutar cada herramienta y recolectar outputs
+        # Separar herramientas Function de MCP para procesamiento diferente
+        function_tool_outputs = []
+        mcp_tools_to_process = []
+        
+        # 1. Clasificar y ejecutar herramientas según su tipo
         for tool_call in tool_calls_to_process:
             # Manejar diferencias entre ResponseFunctionToolCall y formato anterior
             tool_name = getattr(tool_call, 'name', 'unknown')
@@ -171,73 +122,97 @@ def handle_tool_calls_responses_api(client, initial_response, responses_input, o
             else:
                 tool_args = getattr(tool_call, 'arguments', {})
             
-            logger.info(f"🔧 [TOOL HANDLER] Ejecutando herramienta: {tool_name}")
+            logger.info(f"🔧 [TOOL HANDLER] Clasificando herramienta: {tool_name}")
             
             # Determinar si es herramienta Function o MCP
             is_function_tool = False
-            is_mcp_tool = False
             
-            # Verificar si está en herramientas Function
+            # Verificar si está en herramientas Function (soporta name en nivel superior y anidado)
             function_tools = load_function_tools_for_assistant(assistant_number)
             for func_tool in function_tools:
-                if func_tool.get('name') == tool_name:
+                name_top = func_tool.get('name')  # Formato correcto con name en nivel superior
+                name_nested = func_tool.get('function', {}).get('name')  # Fallback para formato anidado
+                if name_top == tool_name or name_nested == tool_name:
                     is_function_tool = True
                     break
             
-            # Si no es Function, asumir que es MCP
-            if not is_function_tool:
-                is_mcp_tool = True
-            
-            # Ejecutar herramienta según su tipo
             if is_function_tool:
-                result = execute_function_tool(tool_name, tool_args, assistant_number)
-            elif is_mcp_tool:
-                # Usar mcp_servers pasados como parámetro
-                if mcp_servers:
-                    result = execute_mcp_tool(tool_name, tool_args, mcp_servers)
-                else:
-                    result = {
-                        "error": "No MCP servers configured",
-                        "tool_name": tool_name
-                    }
+                # FUNCTION TOOL: Ejecutar via N8N bridge
+                logger.info(f"🔧 [FUNCTION TOOL] Ejecutando {tool_name} via N8N bridge")
+                result = execute_function_tool(tool_name, tool_args, assistant_number, subscriber_id, thread_id)
+                
+                # Agregar a tool_outputs para submit_tool_outputs
+                function_tool_outputs.append({
+                    "tool_call_id": tool_id,
+                    "output": json.dumps(result, ensure_ascii=False)
+                })
+                logger.info(f"🔧 [FUNCTION TOOL] Output preparado para {tool_name} (call_id: {tool_id})")
+                
             else:
-                result = {"error": f"Unknown tool type: {tool_name}"}
-            
-            # Agregar a tool_outputs para submit_tool_outputs
-            tool_outputs.append({
-                "tool_call_id": tool_id,
-                "output": json.dumps(result, ensure_ascii=False)
-            })
-            logger.info(f"🔧 [TOOL HANDLER] Tool output preparado para {tool_name} (call_id: {tool_id})")
+                # MCP TOOL: Agregar a lista para procesamiento MCP
+                logger.info(f"🛠️ [MCP TOOL] Agregando {tool_name} para procesamiento MCP")
+                mcp_tools_to_process.append({
+                    'tool_call': tool_call,
+                    'tool_name': tool_name,
+                    'tool_id': tool_id,
+                    'tool_args': tool_args
+                })
         
-        # ÚNICA RUTA VÁLIDA: submit_tool_outputs
-        if not response_id:
-            logger.error(f"🔧 [TOOL HANDLER] ERROR CRÍTICO: Sin response_id para submit_tool_outputs")
-            raise ValueError("response_id es requerido para submit_tool_outputs en Responses API")
+        # 2. Procesar TODAS las herramientas Function PRIMERO (si las hay) - ENVIADAS A N8N
+        if function_tool_outputs:
+            logger.info(f"🔧 [FUNCTION TOOLS] ✅ {len(function_tool_outputs)} herramientas Function enviadas a N8N")
+            
+            logger.info(f"🔧 [FUNCTION TOOLS] Datos enviados a N8N webhooks:")
+            for i, output in enumerate(function_tool_outputs):
+                logger.info(f"🔧 [FUNCTION TOOLS] Tool {i+1}: call_id={output['tool_call_id']}")
+                logger.info(f"🔧 [FUNCTION TOOLS] N8N Response: {output['output'][:200]}...")
+                
+            # CRÍTICO: Hacer 2ª llamada a Responses API enviando tool_result con previous_response_id
+            logger.info(f"🔧 [FUNCTION TOOLS] Preparando 2ª llamada con tool_result y previous_response_id: {response_id}")
+            
+            try:
+                # Construir input para 2ª llamada con function_call_output (sin role)
+                tool_input = []
+                for output in function_tool_outputs:
+                    tool_input.append({
+                        "type": "function_call_output",
+                        "call_id": output['tool_call_id'],
+                        "output": output['output']  # Texto o JSON stringificado
+                    })
+                
+                logger.info(f"🔧 [FUNCTION TOOLS] Haciendo 2ª llamada con {len(tool_input)} tool_results")
+                
+                # 2ª llamada a Responses API con tool_result
+                final_response = client.responses.create(
+                    model=llm_id,
+                    previous_response_id=response_id,
+                    input=tool_input,
+                    temperature=model_parameters.get("temperature"),
+                    max_output_tokens=model_parameters.get("max_completion_tokens")
+                )
+                
+                logger.info(f"🔧 [FUNCTION TOOLS] ✅ 2ª llamada exitosa - Response ID: {final_response.id}")
+                logger.info(f"🔧 [FUNCTION TOOLS] ✅ Final response output_text: {len(getattr(final_response, 'output_text', ''))} chars")
+                
+                # Si también hay MCP tools, ya fueron procesadas automáticamente en la 1ª llamada
+                if mcp_tools_to_process:
+                    logger.info(f"🛠️ [MCP TOOLS] {len(mcp_tools_to_process)} herramientas MCP fueron procesadas automáticamente en la 1ª llamada")
+                
+                return final_response
+                
+            except Exception as second_call_error:
+                logger.error(f"🔧 [FUNCTION TOOLS] ❌ Error en 2ª llamada: {str(second_call_error)}")
+                logger.info(f"🔧 [FUNCTION TOOLS] Fallback: devolviendo initial_response")
+                return initial_response
         
-        if not tool_outputs:
-            logger.error(f"🔧 [TOOL HANDLER] ERROR CRÍTICO: Sin tool_outputs para submit_tool_outputs")
-            raise ValueError("tool_outputs es requerido para submit_tool_outputs en Responses API")
+        # 3. Manejar SOLO herramientas MCP (sin Function tools) - FLUJO AUTOMÁTICO
+        if mcp_tools_to_process:
+            logger.info(f"🔧 [RESUMEN] Caso MCP: {len(mcp_tools_to_process)} MCP tools → procesamiento automático")
+            return initial_response
         
-        try:
-            logger.info(f"🔧 [TOOL HANDLER] ===== USANDO submit_tool_outputs =====")
-            logger.info(f"🔧 [TOOL HANDLER] Response ID: {response_id}")
-            logger.info(f"🔧 [TOOL HANDLER] Tool outputs ({len(tool_outputs)}): {json.dumps(tool_outputs, indent=2)}")
-            
-            final_response = client.responses.submit_tool_outputs(
-                response_id=response_id,
-                tool_outputs=tool_outputs
-            )
-            
-            logger.info(f"🔧 [TOOL HANDLER] ✅ submit_tool_outputs completado exitosamente")
-            logger.info(f"🔧 [TOOL HANDLER] Final response ID: {getattr(final_response, 'id', 'No ID')}")
-            logger.info(f"🔧 [TOOL HANDLER] Final output_text length: {len(getattr(final_response, 'output_text', '')) if hasattr(final_response, 'output_text') else 0}")
-            return final_response
-            
-        except Exception as submit_error:
-            logger.error(f"🔧 [TOOL HANDLER] ❌ ERROR CRÍTICO en submit_tool_outputs: {str(submit_error)}")
-            logger.error(f"🔧 [TOOL HANDLER] No hay fallback disponible - solo submit_tool_outputs es válido en Responses API")
-            raise submit_error
+        # 4. Sin herramientas - respuesta normal
+        logger.info(f"🔧 [RESUMEN] Sin herramientas - respuesta normal")
+        return initial_response
         
     except Exception as e:
         logger.error(f"🔧 [TOOL HANDLER] Error en handle_tool_calls: {e}")
@@ -695,26 +670,27 @@ def generate_response_openai_mcp(
                 
                 if function_tool_calls:
                     logger.info(f"🔧 [TOOL CALLS] ========== RESUMEN DE TOOL CALLS ==========")
-                    logger.info(f"🔧 [TOOL CALLS] Detectadas {len(function_tool_calls)} herramientas a ejecutar en response.output")
+                    logger.info(f"🔧 [TOOL CALLS] Detectadas {len(function_tool_calls)} herramientas FUNCTION a ejecutar en response.output")
                     for i, tool_call in enumerate(function_tool_calls):
-                        logger.info(f"🔧 [TOOL CALLS] Tool {i+1}: {tool_call.name} (call_id: {tool_call.call_id})")
+                        logger.info(f"🔧 [TOOL CALLS] Function Tool {i+1}: {tool_call.name} (call_id: {tool_call.call_id})")
                     logger.info(f"🔧 [TOOL CALLS] =======================================")
                     
-                    # Manejar tool calls y hacer submit_tool_outputs
-                    # Necesitamos pasar mcp_servers para la ejecución de herramientas MCP
-                    logger.info(f"🔧 [TOOL CALLS] Iniciando procesamiento con submit_tool_outputs (única ruta válida en Responses API)")
+                    # Manejar SOLO Function tool calls (las que van a N8N)
+                    logger.info(f"🔧 [TOOL CALLS] Procesando Function tools via N8N bridge")
                     
                     response = handle_tool_calls_responses_api(
                         client, response, responses_input, openai_tools, 
                         llm_id, thread_id, model_parameters, assistant_number, 
-                        mcp_servers=mcp_servers, function_tool_calls=function_tool_calls
+                        mcp_servers=mcp_servers, function_tool_calls=function_tool_calls,
+                        subscriber_id=subscriber_id
                     )
                     
                     # Continuar con el response de la segunda llamada
-                    logger.info(f"🔧 [TOOL CALLS] ✅ Procesamiento de tool calls completado exitosamente")
+                    logger.info(f"🔧 [TOOL CALLS] ✅ Procesamiento de Function tools completado exitosamente")
                     logger.info(f"🔧 [TOOL CALLS] Procesando respuesta final del modelo")
                 else:
-                    logger.info(f"🔧 [TOOL CALLS] ❌ No se encontraron tool calls en response.output - continuando con respuesta normal")
+                    logger.info(f"🔧 [TOOL CALLS] ❌ No se encontraron Function tool calls - MCP tools se procesan automáticamente")
+                    logger.info(f"🔧 [TOOL CALLS] Continuando con respuesta normal (MCP automático)")
                 
                 # DEBUG: Análisis detallado del response para output
                 logger.info(f"📊 [OUTPUT DEBUG] === DEBUGGING OUTPUT PARA LANGFUSE ===")

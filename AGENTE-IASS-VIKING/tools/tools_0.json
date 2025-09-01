@@ -1,0 +1,17 @@
+[
+  {
+    "type": "function",
+    "name": "cambiar_nombre",
+    "description": "Cambia el nombre del cliente en el sistema",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "description": "Nombre completo del cliente (nombre y apellido)"
+        }
+      },
+      "required": ["nombre"]
+    }
+  }
+]

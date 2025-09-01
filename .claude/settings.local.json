@@ -15,7 +15,10 @@
       "Read(/mnt/c/**)",
       "Bash(sync)",
       "Bash(pip show:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cat:*)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:community.openai.com)"
     ],
     "deny": []
   }
