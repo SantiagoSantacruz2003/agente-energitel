@@ -353,10 +353,10 @@ def init_endpoints(app, conversation_manager, thread_locks):
             thread.start()
             
             # Esperar con timeout específico
-            timeout_occurred = not event.wait(timeout=60)
+            timeout_occurred = not event.wait(timeout=180)
             
             if timeout_occurred:
-                logger.error(f"Timeout de 60 segundos alcanzado para thread_id: {thread_id}")
+                logger.error(f"Timeout de 180 segundos alcanzado para thread_id: {thread_id}")
                 
                 # Calcular duración para el timeout
                 end_time = time.time()

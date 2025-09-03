@@ -13,7 +13,7 @@ N8N_WEBHOOKS = {
         "url": os.getenv("N8N_CAMBIAR_NOMBRE_URL", "https://automatizacion.ssantacruz.co/webhook/cambiarNombreEnergitelApi"),
         "method": "POST",
         "headers": {"Content-Type": "application/json"},
-        "timeout": 50
+        "timeout": 60
     },
     # Agrega aquí más herramientas, p.ej.:
     # "crear_direccion": {

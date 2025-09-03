@@ -100,7 +100,7 @@ class SimpleMCPClient:
                 f"{self.server_url}/execute-tool",
                 json=payload,
                 headers={'Content-Type': 'application/json'},
-                timeout=30
+                timeout=60
             )
             
             if response.status_code == 200:
